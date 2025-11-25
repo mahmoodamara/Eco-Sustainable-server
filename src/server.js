@@ -39,11 +39,11 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["http://localhost:5173"], // عنوان الفرونت (Vite)
+    origin: "https://eco-sustainable.netlify.app",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
 );
-
 // خدمة الملفات الثابتة للصور (public/images → /images)
 app.use(
   "/images",
