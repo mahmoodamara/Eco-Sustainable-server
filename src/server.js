@@ -39,11 +39,15 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "https://eco-sustainable.netlify.app",
+    origin: [
+      "https://eco-sustainable.netlify.app",
+      "http://localhost:5173"
+    ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
 );
+
 // خدمة الملفات الثابتة للصور (public/images → /images)
 app.use(
   "/images",

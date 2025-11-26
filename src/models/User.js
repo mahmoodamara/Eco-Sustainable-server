@@ -11,6 +11,14 @@ const levelStatusSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// ✅ استخدم نفس مفاتيح التوبيكات الحقيقية
+const INITIAL_PROGRESS = () => ({
+  green_energy:     { easy: false, medium: false, hard: false },
+  waste_management: { easy: false, medium: false, hard: false },
+  climate_change:   { easy: false, medium: false, hard: false },
+  sustainability:   { easy: false, medium: false, hard: false },
+});
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -48,7 +56,7 @@ const userSchema = new mongoose.Schema(
     progress: {
       type: Map,
       of: levelStatusSchema,
-      default: {},
+      default: INITIAL_PROGRESS, // 👈 هون
     },
   },
   {
