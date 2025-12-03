@@ -62,6 +62,7 @@ router.post("/register", async (req, res, next) => {
       preferredLang: user.preferredLang,
       behaviorCompleted: user.behaviorCompleted,
       behaviorScore: user.behaviorScore,
+      needsBehaviorRetake: user.needsBehaviorRetake,  // 👈 تمت إضافته
       progress: user.progress || {}, // ✅ نتأكد إنها object
     };
 
@@ -101,6 +102,7 @@ router.post("/login", async (req, res, next) => {
 
     const token = signToken(user._id);
 
+    // ⬅️ إرجاع كل الحقول المهمة للفرونت بما فيها المتغيّر الجديد
     const userSafe = {
       _id: user._id,
       name: user.name,
@@ -108,7 +110,8 @@ router.post("/login", async (req, res, next) => {
       preferredLang: user.preferredLang,
       behaviorCompleted: user.behaviorCompleted,
       behaviorScore: user.behaviorScore,
-      progress: user.progress || {}, // ✅ برضو هنا
+      needsBehaviorRetake: user.needsBehaviorRetake,  // 👈 تمت إضافته
+      progress: user.progress || {},
     };
 
     res.json({
@@ -121,6 +124,7 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
+
 /**
  * GET /api/auth/me
  * يحتاج Authorization: Bearer <token>
@@ -129,7 +133,7 @@ router.get("/me", authRequired, async (req, res, next) => {
   try {
     // authRequired حط user في req.user، بس نجيب من الداتابيس ونعمل select واضح
     const user = await User.findById(req.user._id).select(
-      "_id name email preferredLang behaviorCompleted behaviorScore progress"
+      "_id name email preferredLang behaviorCompleted behaviorScore needsBehaviorRetake progress"
     );
 
     if (!user) {
@@ -143,6 +147,8 @@ router.get("/me", authRequired, async (req, res, next) => {
       preferredLang: user.preferredLang,
       behaviorCompleted: user.behaviorCompleted,
       behaviorScore: user.behaviorScore,
+            needsBehaviorRetake: user.needsBehaviorRetake,  // 👈 تمت إضافته
+
       progress: user.progress || {}, // ✅ مهم جداً لـ refreshUser والـ frontend
     };
 

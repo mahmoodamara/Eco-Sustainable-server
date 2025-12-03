@@ -40,7 +40,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: [
-      "https://eco-edusoft.netlify.app",
+      "https://eco-sustainable.netlify.app",
       "http://localhost:5173"
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],

@@ -23,12 +23,14 @@ function classifyBehaviorScore(averageScore) {
 
 /**
  * GET /api/behavior/status
- * يرجع حالة إكمال المقياس + السكور المخزَّن
+ * يرجع حالة إكمال المقياس + السكور + حالة إعادة الاستبيان
  */
 router.get("/status", authRequired, async (req, res, next) => {
   try {
     const behaviorCompleted = !!req.user.behaviorCompleted;
     const behaviorScore = req.user.behaviorScore ?? null;
+    const needsBehaviorRetake = !!req.user.needsBehaviorRetake;
+
     const classification = behaviorScore
       ? classifyBehaviorScore(behaviorScore)
       : null;
@@ -36,6 +38,7 @@ router.get("/status", authRequired, async (req, res, next) => {
     res.json({
       behaviorCompleted,
       behaviorScore,
+      needsBehaviorRetake,
       classification,
     });
   } catch (err) {
@@ -192,17 +195,29 @@ router.post("/complete", authRequired, async (req, res, next) => {
     const averageScore = totalScore / totalWeight;
     const classification = classifyBehaviorScore(averageScore);
 
-    // تخزين في الـ user (نخزن المتوسط كنقطة واحدة)
-    req.user.behaviorCompleted = true;
+    // ✅ منطق حفظ البيانات في الـ User:
+    // - دائمًا نحدث behaviorScore
+    // - أول مرة: behaviorCompleted = true, needsBehaviorRetake = false
+    // - إذا كان يعيد الاستبيان بعد فتحه مرة ثانية: needsBehaviorRetake = false فقط
+
     req.user.behaviorScore = averageScore;
+
+    if (!req.user.behaviorCompleted) {
+      // أول مرة يكمّل الاستبيان → يفتح المحتوى والاختبارات
+      req.user.behaviorCompleted = true;
+      req.user.needsBehaviorRetake = false;
+    } else if (req.user.needsBehaviorRetake) {
+      // إعادة الاستبيان بعد إنهاء الـ 12 مستوى
+      req.user.needsBehaviorRetake = false;
+    }
+
     await req.user.save();
 
     res.json({
       message: "Behavior test saved",
-      behaviorCompleted: true,
-      // السكور الرئيسي (متوسط 1–10)
+      behaviorCompleted: req.user.behaviorCompleted,
+      needsBehaviorRetake: req.user.needsBehaviorRetake,
       behaviorScore: averageScore,
-      // معلومات إضافية مفيدة للفرونت/الداتا
       totalScore,
       minPossible,
       maxPossible,
@@ -210,6 +225,47 @@ router.post("/complete", authRequired, async (req, res, next) => {
     });
   } catch (err) {
     next(err);
+  }
+});
+
+/**
+ * PATCH /api/behavior/reset
+ * ✅ هنا المنطق الجديد:
+ *  - لا نغلق behaviorCompleted
+ *  - لا نلمس behaviorScore
+ *  - فقط نفتح إمكانية إعادة الاستبيان عبر needsBehaviorRetake = true
+ *  - تستخدمها لما المستخدم يكمل كل الـ 12 مستوى
+ */
+router.patch("/reset", authRequired, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          needsBehaviorRetake: true,
+        },
+      },
+      { new: true }
+    ).select(
+      "_id name email behaviorCompleted behaviorScore preferredLang progress needsBehaviorRetake"
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      message: "Behavior questionnaire is now open for retake",
+      behaviorCompleted: updatedUser.behaviorCompleted,
+      behaviorScore: updatedUser.behaviorScore,
+      needsBehaviorRetake: updatedUser.needsBehaviorRetake,
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error("Error resetting behavior status", err);
+    res.status(500).json({ message: "Failed to reset behavior status" });
   }
 });
 
